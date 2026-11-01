@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio de Análisis Espectral de Fourier</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- MathJax for LaTeX rendering -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <!-- Driver.js for Interactive Tour -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.js.iife.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        
+        .font-mono {
+            font-family: 'Fira Code', monospace;
+        }
+
+        mjx-container[jax="CHTML"][display="true"] {
+            margin: 0.2em 0 !important;
+        }
+
+        /* Custom Range Sliders */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer;
+            background: #334155; border-radius: 4px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 16px; width: 16px; border-radius: 50%;
+            background: #22d3ee; cursor: pointer;
+            -webkit-appearance: none; margin-top: -5px;
+            box-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        
+        /* Slider Específico para Amortiguamiento (Cyan Oscuro) */
+        #gamma-slider::-webkit-slider-thumb {
+            background: #06b6d4;
+            box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+        }
+
+        /* Select Dropdown */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+        }
+
+        canvas { image-rendering: crisp-edges; }
+
+        /* --- Driver.js Overrides: Tema Oscuro y Fix de Botón Omitir --- */
+        .driver-popover {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid #475569 !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+            border-radius: 0.75rem !important;
+            padding-top: 15px !important;
+        }
+        
+        .driver-popover-title { 
+            color: #22d3ee !important; 
+            font-family: 'Fira Code', monospace; 
+            font-size: 1.1rem !important;
+            padding-right: 80px !important; 
+            margin-bottom: 10px !important;
+            line-height: 1.3 !important;
+        }
+        
+        .driver-popover-description { 
+            color: #cbd5e1 !important; 
+            font-size: 0.9rem !important; 
+            margin-bottom: 1rem !important; 
+        }
+        
+        .driver-popover-footer button {
+            background-color: #334155 !important; 
+            color: white !important;
+            text-shadow: none !important; 
+            border-radius: 0.375rem !important;
+        }
+        
+        .driver-popover-close-btn {
+            all: unset !important;
+            position: absolute !important;
+            top: 12px !important;
+            right: 12px !important;
+            padding: 4px 10px !important;
+            border-radius: 6px !important;
+            background: #334155 !important;
+            color: white !important;
+            cursor: pointer !important;
+            font-family: 'Inter', sans-serif !important;
+            font-size: 12px !important;
+            z-index: 100 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: background-color 0.2s !important;
+        }
+        
+        .driver-popover-close-btn svg { display: none !important; }
+        .driver-popover-close-btn::before { content: 'Omitir' !important; display: block !important; }
+        .driver-popover-close-btn:hover { background-color: #475569 !important; }
+
+    </style>
+</head>
+<body class="min-h-screen flex flex-col p-4 md:p-6 gap-4">
+
+    <!-- Encabezado (Ahora solo contiene el Título y Botón) -->
+    <header class="flex justify-between items-center pb-2">
+        <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-violet-500">
+            LABORATORIO DE ANÁLISIS ESPECTRAL
+        </h1>
+        <button id="btn-tour" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-full px-5 py-2 text-sm font-semibold transition-all shadow-lg">
+            ❓ Guía Interactiva
+        </button>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
+        
+        <!-- PANEL DE CONTROLES LATERAL -->
+        <div id="panel-controles" class="col-span-1 bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl flex flex-col gap-6 overflow-y-auto">
+            
+            <div class="space-y-4">
+                <div class="uppercase tracking-widest text-[10px] text-cyan-400 font-bold border-b border-slate-700 pb-1">Generador de Funciones</div>
+                
+                <!-- Selector de Onda -->
+                <div id="tour-selector">
+                    <label class="text-xs text-slate-400 font-semibold mb-1 block">Selección de Serie</label>
+                    <select id="wave-selector" class="w-full bg-slate-900 border border-slate-600 text-slate-200 rounded-lg p-2 text-sm focus:border-cyan-500 outline-none transition-colors">
+                        <option value="Cuadrada (Sen - Impar)">Cuadrada (Sen - Impar)</option>
+                        <option value="Cuadrada (Cos - Par)">Cuadrada (Cos - Par)</option>
+                        <option value="Triangular (Sen - Impar)">Triangular (Sen - Impar)</option>
+                        <option value="Triangular (Cos - Par)">Triangular (Cos - Par)</option>
+                        <option value="Diente de Sierra">Diente de Sierra</option>
+                        <option value="Senoidal">Senoidal</option>
+                    </select>
+                </div>
+
+                <!-- Sliders Matemáticos -->
+                <div id="tour-armonicos">
+                    <div class="flex justify-between text-xs text-slate-400 font-semibold mb-1">
+                        <span>Armónicos (N)</span><span id="n-val" class="text-cyan-400 font-mono">20</span>
+                    </div>
+                    <input type="range" id="n-slider" min="1" max="50" value="20">
+                </div>
+                
+                <div id="tour-parametros" class="space-y-4 bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
+                    <div>
+                        <div class="flex justify-between text-xs text-slate-400 font-semibold mb-1">
+                            <span>Frecuencia Base</span><span id="f-val" class="text-cyan-400 font-mono">250 Hz</span>
+                        </div>
+                        <input type="range" id="f-slider" min="20" max="1000" value="250" step="10">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs text-slate-400 font-semibold mb-1">
+                            <span>Desfase (φ)</span><span id="ph-val" class="text-cyan-400 font-mono">0°</span>
+                        </div>
+                        <input type="range" id="ph-slider" min="0" max="360" value="0" step="1">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs text-slate-400 font-semibold mb-1">
+                            <span>Offset DC</span><span id="dc-val" class="text-cyan-400 font-mono">0.0</span>
+                        </div>
+                        <input type="range" id="dc-slider" min="-1" max="1" value="0" step="0.1">
+                    </div>
+                </div>
+
+                <!-- Laboratorio de Física -->
+                <div id="tour-lab-fisica" class="space-y-4 bg-[#0f172a] p-3 rounded-xl border border-slate-700/50 shadow-inner">
+                    <h3 class="text-pink-400 font-bold text-sm border-b border-slate-700/50 pb-1 mb-2">Laboratorio de Física</h3>
+                    
+                    <div>
+                        <div class="flex justify-between text-xs text-slate-400 font-semibold mb-1">
+                            <span>Amortiguamiento (γ)</span><span id="gamma-val" class="text-cyan-400 font-mono">0.00</span>
+                        </div>
+                        <input type="range" id="gamma-slider" min="0" max="1" value="0" step="0.01">
+                    </div>
+
+                    <div class="flex flex-col gap-2 mt-2">
+                        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="chk-estacionarias" class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-cyan-500 focus:ring-cyan-500 cursor-pointer">
+                            Ondas Estacionarias (Nodos Fijos)
+                        </label>
+                        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="chk-viajeras" class="w-4 h-4 rounded bg-slate-800 border-slate-600 text-cyan-500 focus:ring-cyan-500 cursor-pointer">
+                            Interferencia Espacial (Viajeras)
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="space-y-3 mt-auto pt-4 border-t border-slate-700">
+                <div id="tour-audio" class="flex gap-2">
+                    <button id="btn-play" class="flex-1 bg-emerald-600/20 text-emerald-400 border border-emerald-600/50 rounded-lg p-2 text-xs font-bold transition-all hover:bg-emerald-600 hover:text-white shadow-lg">▶ Reproducir Audio</button>
+                    <button id="btn-stop" class="flex-1 bg-rose-600/20 text-rose-400 border border-rose-600/50 rounded-lg p-2 text-xs font-bold transition-all opacity-50" disabled>⏹ Detener</button>
+                </div>
+                
+                <div id="tour-mic">
+                    <button id="btn-mic" class="w-full bg-cyan-600/20 text-cyan-400 border border-cyan-600/50 rounded-lg p-2 text-xs font-bold transition-all hover:bg-cyan-600 hover:text-black shadow-lg">🎙️ Activar Micrófono</button>
+                </div>
+
+                <div id="tour-sync">
+                    <button id="btn-sync" class="w-full bg-amber-600/20 text-amber-400 border border-amber-600/50 rounded-lg p-2 text-xs font-bold transition-all hover:bg-amber-600 hover:text-black shadow-lg">⚡ Auto-Sincronizar</button>
+                </div>
+                
+                <div class="flex gap-2">
+                    <div id="tour-medir" class="flex-1">
+                        <button id="btn-freeze" class="w-full bg-indigo-600/20 text-indigo-400 border border-indigo-600/50 rounded-lg p-2 text-xs font-bold transition-all hover:bg-indigo-600 hover:text-white shadow-lg">🛑 Medir</button>
+                    </div>
+                    <div id="tour-filtro" class="flex-1">
+                        <button id="btn-filter" class="w-full bg-teal-600/20 text-teal-400 border border-teal-600/50 rounded-lg p-2 text-xs font-bold transition-all hover:bg-teal-600 hover:text-white shadow-lg">🎛️ Filtro</button>
+                    </div>
+                </div>
+                
+                <div id="tour-exportar">
+                    <button id="btn-csv" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 border border-slate-600 rounded-lg p-2 text-xs font-bold transition-all shadow-lg">📥 Exportar CSV</button>
+                </div>
+            </div>
+
+            <!-- Acreditación Académica -->
+            <div class="mt-2 bg-[#0f172a] p-4 rounded-xl border border-slate-700/50 shadow-inner">
+                <h3 class="text-white font-bold text-[13px] border-b border-slate-700/50 pb-2 mb-3 tracking-wide uppercase">Acreditación Académica</h3>
+                <p class="text-slate-300 text-sm mb-1"><span class="font-bold">Materia:</span> Oscilaciones y Ondas</p>
+                <p class="text-slate-300 text-sm mb-3"><span class="font-bold">Institución:</span> ESIME - IPN</p>
+                <p class="text-slate-400 text-xs italic leading-relaxed">
+                    Instrumento desarrollado mediante inteligencia artificial bajo el diseño, especificaciones técnicas y supervisión del alumno <span class="text-white font-bold not-italic">Bautista Cocoletzi Kevin</span>.
+                </p>
+            </div>
+            
+        </div>
+
+        <!-- ÁREA DE LIENZOS Y FÓRMULA (Columna Derecha) -->
+        <div class="col-span-1 lg:col-span-3 flex flex-col gap-4">
+            
+            <!-- Representación MathJax (Movida aquí arriba de la gráfica) -->
+            <div class="bg-slate-800 rounded-xl pt-3 pb-1 border border-slate-700 shadow-inner flex flex-col items-center justify-center overflow-x-auto relative">
+                <div class="absolute top-1 text-[9px] text-slate-400 font-bold tracking-widest uppercase">Representación de la Serie de Fourier</div>
+                <div id="mathjax-display" class="text-slate-200 mt-2">
+                    $$ f(t) = \frac{4}{\pi} \sum_{k=1}^{\infty} \frac{\sin((2k-1)\omega t)}{2k-1} $$
+                </div>
+            </div>
+
+            <!-- Osciloscopio Principal -->
+            <div id="tour-osciloscopio" class="flex-1 bg-slate-900 border border-slate-700 rounded-2xl relative overflow-hidden shadow-inner min-h-[250px]">
+                <div class="absolute top-3 right-3 bg-black/60 border border-slate-700 p-2 rounded text-[10px] font-mono text-slate-300 z-20 pointer-events-none space-y-1">
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-[#a855f7] shadow-[0_0_5px_#c084fc]"></span> Onda Sintetizada</div>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-[#0ea5e9] shadow-[0_0_5px_#38bdf8]"></span> Entrada Micrófono</div>
+                </div>
+                <canvas id="main-canvas" class="w-full h-full relative z-10 cursor-crosshair"></canvas>
+            </div>
+            
+            <!-- Analizador FFT -->
+            <div id="tour-fft" class="bg-[#0a0f14] border border-slate-700 rounded-xl relative overflow-hidden h-[150px]">
+                <div class="absolute top-2 left-3 text-[10px] font-mono text-green-400 z-20 pointer-events-none tracking-widest uppercase">Espectro de Frecuencias (FFT)</div>
+                <canvas id="fft-canvas" class="w-full h-full relative z-10"></canvas>
+            </div>
+
+            <!-- Espectrograma -->
+            <div id="tour-espectrograma" class="bg-[#0a0f14] border border-slate-700 rounded-xl relative overflow-hidden h-[100px]">
+                <div class="absolute top-2 left-3 text-[10px] font-mono text-pink-400 z-20 pointer-events-none tracking-widest uppercase">Espectrograma en Cascada</div>
+                <canvas id="spectro-canvas" class="w-full h-full relative z-10"></canvas>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- 1. ESTADO GLOBAL ---
+        const state = {
+            waveType: 'Cuadrada (Sen - Impar)',
+            N: 20, frequency: 250, phase: 0, dcOffset: 0,
+            gamma: 0, waveMode: 'normal', 
+            isPlaying: false, isMicActive: false, isFrozen: false, isFilterActive: false,
+            timeOffset: 0
+        };
+
+        const mouse = { x: 0, y: 0, over: false, cursorA: null, cursorB: null };
+
+        const formulas = {
+            'Cuadrada (Sen - Impar)': '$$ f(t) = \\frac{4}{\\pi} \\sum_{k=1}^{\\infty} \\frac{\\sin((2k-1)\\omega t)}{2k-1} $$',
+            'Cuadrada (Cos - Par)': '$$ f(t) = \\frac{4}{\\pi} \\sum_{k=1}^{\\infty} (-1)^{k-1} \\frac{\\cos((2k-1)\\omega t)}{2k-1} $$',
+            'Triangular (Sen - Impar)': '$$ f(t) = \\frac{8}{\\pi^2} \\sum_{k=1}^{\\infty} (-1)^{k-1} \\frac{\\sin((2k-1)\\omega t)}{(2k-1)^2} $$',
+            'Triangular (Cos - Par)': '$$ f(t) = \\frac{8}{\\pi^2} \\sum_{k=1}^{\\infty} \\frac{\\cos((2k-1)\\omega t)}{(2k-1)^2} $$',
+            'Diente de Sierra': '$$ f(t) = \\frac{2}{\\pi} \\sum_{n=1}^{\\infty} (-1)^{n+1} \\frac{\\sin(n\\omega t)}{n} $$',
+            'Senoidal': '$$ f(t) = \\sin(\\omega t) $$'
+        };
+
+        // --- 2. ELEMENTOS DEL DOM ---
+        const els = {
+            waveSel: document.getElementById('wave-selector'),
+            mathDisplay: document.getElementById('mathjax-display'),
+            nVal: document.getElementById('n-val'), nSli: document.getElementById('n-slider'),
+            fVal: document.getElementById('f-val'), fSli: document.getElementById('f-slider'),
+            phVal: document.getElementById('ph-val'), phSli: document.getElementById('ph-slider'),
+            dcVal: document.getElementById('dc-val'), dcSli: document.getElementById('dc-slider'),
+            gammaVal: document.getElementById('gamma-val'), gammaSli: document.getElementById('gamma-slider'),
+            chkEst: document.getElementById('chk-estacionarias'), chkViaj: document.getElementById('chk-viajeras'),
+            btnPlay: document.getElementById('btn-play'), btnStop: document.getElementById('btn-stop'),
+            btnMic: document.getElementById('btn-mic'), btnSync: document.getElementById('btn-sync'),
+            btnFreeze: document.getElementById('btn-freeze'), btnFilter: document.getElementById('btn-filter'),
+            btnCsv: document.getElementById('btn-csv'), btnTour: document.getElementById('btn-tour'),
+            cMain: document.getElementById('main-canvas'), ctxMain: document.getElementById('main-canvas').getContext('2d'),
+            cFft: document.getElementById('fft-canvas'), ctxFft: document.getElementById('fft-canvas').getContext('2d'),
+            cSpec: document.getElementById('spectro-canvas'), ctxSpec: document.getElementById('spectro-canvas').getContext('2d')
+        };
+
+        // --- 3. LÓGICA MATEMÁTICA ---
+        function getFourierCoefficients(type, maxN) {
+            const real = new Float32Array(maxN + 1);
+            const imag = new Float32Array(maxN + 1);
+            for (let n = 1; n <= maxN; n++) {
+                if (type === 'Cuadrada (Sen - Impar)' && n % 2 !== 0) imag[n] = 4 / (Math.PI * n);
+                else if (type === 'Cuadrada (Cos - Par)' && n % 2 !== 0) real[n] = (4 / (Math.PI * n)) * Math.sin((n * Math.PI) / 2);
+                else if (type === 'Triangular (Sen - Impar)' && n % 2 !== 0) imag[n] = (8 / (Math.PI ** 2 * n ** 2)) * Math.pow(-1, (n - 1) / 2);
+                else if (type === 'Triangular (Cos - Par)' && n % 2 !== 0) real[n] = 8 / (Math.PI ** 2 * n ** 2);
+                else if (type === 'Diente de Sierra') imag[n] = (2 / (Math.PI * n)) * Math.pow(-1, n + 1);
+                else if (type === 'Senoidal' && n === 1) imag[n] = 1;
+            }
+            return { real, imag };
+        }
+
+        function calculateMathPoint(kx, wt, real, imag) {
+            let y = 0;
+            const phaseRad = state.phase * (Math.PI / 180);
+            
+            for (let n = 1; n <= state.N; n++) {
+                if (state.waveMode === 'estacionaria') {
+                    const spatial = n * (kx + phaseRad);
+                    const temporal = n * wt;
+                    y += (real[n] * Math.cos(spatial) + imag[n] * Math.sin(spatial)) * Math.cos(temporal);
+                } else {
+                    const angle = n * (kx - wt + phaseRad);
+                    y += real[n] * Math.cos(angle) + imag[n] * Math.sin(angle);
+                }
+            }
+            
+            let damping = 1;
+            if (state.waveMode !== 'normal') {
+                damping = Math.exp(-state.gamma * kx);
+            }
+            
+            return (y * damping) + state.dcOffset;
+        }
+
+        // --- 4. LÓGICA DE AUDIO (WEB AUDIO API) ---
+        let audioCtx, oscBase, masterGain;
+        let micCtx, micAnalyser, micFilter, micStream, micData, fftData;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = 0.2;
+                masterGain.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function updateAudioWave() {
+            if (audioCtx && oscBase && state.isPlaying) {
+                const { real, imag } = getFourierCoefficients(state.waveType, state.N);
+                const wave = audioCtx.createPeriodicWave(real, imag, { disableNormalization: false });
+                oscBase.setPeriodicWave(wave);
+            }
+        }
+
+        function playSound() {
+            initAudio();
+            if (!state.isPlaying) {
+                const { real, imag } = getFourierCoefficients(state.waveType, state.N);
+                const wave = audioCtx.createPeriodicWave(real, imag, { disableNormalization: false });
+                
+                oscBase = audioCtx.createOscillator();
+                oscBase.frequency.value = state.frequency;
+                oscBase.setPeriodicWave(wave);
+                oscBase.connect(masterGain);
+                oscBase.start();
+
+                state.isPlaying = true;
+                els.btnPlay.disabled = true; els.btnPlay.classList.add('opacity-50');
+                els.btnStop.disabled = false; els.btnStop.classList.remove('opacity-50');
+            }
+        }
+
+        function stopSound() {
+            if (state.isPlaying) {
+                masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+                
+                const oldOsc = oscBase; 
+                oscBase = null; 
+                
+                setTimeout(() => {
+                    if (oldOsc) { oldOsc.stop(); oldOsc.disconnect(); }
+                    masterGain.gain.setValueAtTime(0.2, audioCtx.currentTime); 
+                }, 100);
+                
+                state.isPlaying = false;
+                els.btnPlay.disabled = false; els.btnPlay.classList.remove('opacity-50');
+                els.btnStop.disabled = true; els.btnStop.classList.add('opacity-50');
+            }
+        }
+
+        async function toggleMic() {
+            if (state.isMicActive) {
+                micStream.getTracks().forEach(t => t.stop());
+                micCtx.close(); micCtx = null; state.isMicActive = false;
+                els.btnMic.innerHTML = '🎙️ Activar Micrófono';
+                els.btnMic.classList.replace('bg-cyan-600', 'bg-cyan-600/20');
+                els.btnMic.classList.replace('text-black', 'text-cyan-400');
+            } else {
+                try {
+                    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    micCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    micAnalyser = micCtx.createAnalyser(); micAnalyser.fftSize = 2048;
+                    
+                    micFilter = micCtx.createBiquadFilter(); 
+                    micFilter.type = 'highpass';
+                    micFilter.frequency.value = state.isFilterActive ? 150 : 0;
+                    
+                    const src = micCtx.createMediaStreamSource(micStream);
+                    src.connect(micFilter); micFilter.connect(micAnalyser);
+                    
+                    micData = new Uint8Array(micAnalyser.frequencyBinCount);
+                    fftData = new Uint8Array(micAnalyser.frequencyBinCount);
+                    
+                    state.isMicActive = true;
+                    els.btnMic.innerHTML = '🎙️ Desactivar Micrófono';
+                    els.btnMic.classList.replace('bg-cyan-600/20', 'bg-cyan-600');
+                    els.btnMic.classList.replace('text-cyan-400', 'text-black');
+                } catch (e) { 
+                    alert("Error: No se pudo acceder al micrófono. Por favor permite el acceso en tu navegador."); 
+                }
+            }
+        }
+
+        // --- 5. MOTOR DE RENDERIZADO (CANVAS) ---
+        function resize() {
+            const dpr = window.devicePixelRatio || 1;
+            [els.cMain, els.cFft, els.cSpec].forEach(c => {
+                const rect = c.parentElement.getBoundingClientRect();
+                c.width = rect.width * dpr; c.height = rect.height * dpr;
+                c.getContext('2d').scale(dpr, dpr);
+            });
+        }
+        window.addEventListener('resize', resize);
+
+        function drawMain(w, h, centerY, ampScale, pad) {
+            const ctx = els.ctxMain;
+            ctx.clearRect(0, 0, w, h);
+
+            const displayPeriods = state.frequency / 100;
+
+            ctx.font = '11px Inter'; ctx.fillStyle = '#94a3b8';
+            ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            
+            [-1, -0.5, 0, 0.5, 1].forEach(v => {
+                const y = centerY - v * ampScale;
+                ctx.fillText(v.toFixed(1), pad - 5, y);
+                ctx.fillStyle = 'rgba(71, 85, 105, 0.2)'; 
+                ctx.fillRect(pad, y, w, 1);
+                ctx.fillStyle = '#94a3b8';
+            });
+
+            const maxPi = Math.floor(displayPeriods * 2);
+            const step = maxPi > 10 ? 2 : 1;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            for (let i = step; i <= maxPi; i += step) {
+                const x = pad + (i / (displayPeriods * 2)) * (w - pad);
+                ctx.fillStyle = 'rgba(71, 85, 105, 0.2)';
+                ctx.fillRect(x, 0, 1, h);
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillText(i === 1 ? 'π' : i + 'π', x, centerY + 10);
+            }
+
+            if (!state.isFrozen) state.timeOffset += 0.02;
+            const { real, imag } = getFourierCoefficients(state.waveType, state.N);
+
+            let startIdx = 0;
+            if (state.isMicActive && micData && !state.isFrozen) {
+                micAnalyser.getByteTimeDomainData(micData);
+                for (let i = 0; i < micData.length / 2; i++) {
+                    if (micData[i] < 128 && micData[i+1] >= 128) { 
+                        startIdx = i; break; 
+                    }
+                }
+            }
+
+            ctx.beginPath(); ctx.lineWidth = 3; ctx.strokeStyle = '#a855f7';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#c084fc';
+            for (let x = pad; x < w; x++) {
+                const kx = ((x - pad) / (w - pad)) * (Math.PI * 2 * displayPeriods);
+                const wt = state.timeOffset;
+                const yVal = calculateMathPoint(kx, wt, real, imag);
+                const yCanvas = centerY - (yVal * ampScale);
+                if (x === pad) ctx.moveTo(x, yCanvas); else ctx.lineTo(x, yCanvas);
+            }
+            ctx.stroke();
+
+            if (state.isMicActive && micData) {
+                ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = '#0ea5e9';
+                ctx.shadowColor = '#38bdf8';
+                const samples = Math.floor(micData.length / 2);
+                const slice = (w - pad) / samples;
+                for (let i = 0; i < samples; i++) {
+                    const idx = Math.min(startIdx + i, micData.length - 1);
+                    const yVal = (micData[idx] / 128.0) - 1;
+                    const canvasY = centerY - (yVal * ampScale * 1.5);
+                    if (i === 0) ctx.moveTo(pad, canvasY); else ctx.lineTo(pad + i*slice, canvasY);
+                }
+                ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+
+            if (state.isFrozen) {
+                const drawCursor = (cur, label, color) => {
+                    ctx.beginPath(); ctx.strokeStyle = color; ctx.setLineDash([4,4]);
+                    ctx.moveTo(cur.x, 0); ctx.lineTo(cur.x, h);
+                    ctx.moveTo(pad, cur.y); ctx.lineTo(w, cur.y); ctx.stroke();
+                    ctx.setLineDash([]); ctx.fillStyle = color;
+                    ctx.fillRect(cur.x-4, cur.y-4, 8, 8);
+                    ctx.fillStyle = '#fff'; ctx.fillText(label, cur.x+8, cur.y-8);
+                };
+                
+                if (mouse.over) drawCursor(mouse, '', 'rgba(255,255,255,0.3)');
+                if (mouse.cursorA) drawCursor(mouse.cursorA, 'A', '#38bdf8');
+                if (mouse.cursorB) drawCursor(mouse.cursorB, 'B', '#a855f7');
+                
+                if (mouse.cursorA && mouse.cursorB) {
+                    const dt = Math.abs(((mouse.cursorB.x - mouse.cursorA.x) / (w - pad) * (displayPeriods*2))).toFixed(2);
+                    const da = Math.abs(((mouse.cursorA.y - mouse.cursorB.y) / ampScale)).toFixed(2);
+                    const bx = Math.min(mouse.cursorA.x, mouse.cursorB.x) + 20;
+                    const by = Math.min(mouse.cursorA.y, mouse.cursorB.y) - 40;
+                    
+                    ctx.fillStyle = 'rgba(15,23,42,0.9)'; ctx.fillRect(bx, by, 100, 45);
+                    ctx.strokeStyle = '#eab308'; ctx.strokeRect(bx, by, 100, 45);
+                    ctx.fillStyle = '#eab308'; ctx.textAlign = 'left';
+                    ctx.fillText(`Δx: ${dt}π`, bx+8, by+12); 
+                    ctx.fillText(`ΔV: ${da}`, bx+8, by+28);
+                }
+            }
+        }
+
+        function drawFFT(w, h) {
+            const ctx = els.ctxFft;
+            ctx.clearRect(0, 0, w, h);
+            
+            const maxFreq = 4000;
+            
+            ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)'; ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+            for (let f = 500; f <= maxFreq; f += 500) {
+                const x = (f / maxFreq) * w;
+                ctx.fillRect(x, 0, 1, h); ctx.fillText(`${f}Hz`, x, h-2);
+            }
+
+            if (state.isMicActive && fftData) {
+                if (!state.isFrozen) micAnalyser.getByteFrequencyData(fftData);
+                const nyquist = micCtx.sampleRate / 2;
+                const maxBin = Math.min(fftData.length, Math.floor(maxFreq / (nyquist / micAnalyser.frequencyBinCount)));
+                
+                ctx.beginPath(); ctx.strokeStyle = '#eab308'; ctx.lineWidth = 1.5;
+                for (let i = 0; i <= maxBin; i++) {
+                    const x = (i / maxBin) * w;
+                    const y = h - ((fftData[i] / 255) * h * 0.8);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                ctx.fillStyle = '#ef4444'; ctx.font = '10px Fira Code';
+                for (let i = 2; i < maxBin-2; i++) {
+                    const v = fftData[i];
+                    if (v > 80 && v > fftData[i-1] && v > fftData[i+1] && v > fftData[i-2]) {
+                        const x = (i / maxBin) * w; const y = h - ((v/255)*h*0.8);
+                        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
+                        
+                        const currentFreq = Math.round(i*(nyquist/fftData.length)*2);
+                        ctx.fillStyle = '#22d3ee';
+                        ctx.fillText(`${currentFreq}Hz`, x, y-6);
+                        ctx.fillStyle = '#ef4444';
+                    }
+                }
+            }
+        }
+
+        function drawSpectro(w, h) {
+            const ctx = els.ctxSpec;
+            if (state.isMicActive && fftData && !state.isFrozen) {
+                const cw = els.cSpec.width;
+                const ch = els.cSpec.height;
+                const dpr = window.devicePixelRatio || 1;
+                
+                const imgData = ctx.getImageData(dpr, 0, cw - dpr, ch);
+                ctx.putImageData(imgData, 0, 0);
+                
+                const nyquist = micCtx.sampleRate / 2;
+                const maxBin = Math.floor(4000 / (nyquist / micAnalyser.frequencyBinCount));
+                const colX = (cw / dpr) - 1;
+
+                for (let i = 0; i <= maxBin; i++) {
+                    const v = fftData[i];
+                    const y = h - ((i / maxBin) * h);
+                    const sliceH = Math.max(1, h / maxBin);
+                    
+                    const r = Math.max(0, v * 1.5 - 100);
+                    const b = Math.max(0, v);
+                    const g = Math.max(0, v * 2 - 350);
+                    
+                    ctx.fillStyle = `rgb(${r},${g},${b})`;
+                    ctx.fillRect(colX, y - sliceH, 1, sliceH);
+                }
+            }
+        }
+
+        function loop() {
+            const dpr = window.devicePixelRatio || 1;
+            drawMain(els.cMain.width/dpr, els.cMain.height/dpr, els.cMain.height/dpr / 2, els.cMain.height/dpr * 0.35, 30);
+            drawFFT(els.cFft.width/dpr, els.cFft.height/dpr);
+            drawSpectro(els.cSpec.width/dpr, els.cSpec.height/dpr);
+            requestAnimationFrame(loop);
+        }
+
+        // --- 6. EVENTOS DE INTERFAZ ---
+        function updateUI() {
+            els.mathDisplay.innerHTML = formulas[state.waveType];
+            if (window.MathJax) MathJax.typesetPromise([els.mathDisplay]);
+            
+            els.nVal.innerText = state.N;
+            if (state.waveType === 'Senoidal') { 
+                state.N = 1; els.nSli.disabled = true; els.nVal.innerText = 1; 
+            } else { 
+                els.nSli.disabled = false; 
+            }
+            
+            updateAudioWave(); 
+        }
+
+        els.waveSel.addEventListener('change', e => { state.waveType = e.target.value; updateUI(); });
+        
+        els.nSli.addEventListener('input', e => { 
+            state.N = parseInt(e.target.value); 
+            els.nVal.innerText = state.N; 
+            updateAudioWave(); 
+        });
+        
+        els.fSli.addEventListener('input', e => { 
+            state.frequency = parseInt(e.target.value); els.fVal.innerText = state.frequency + ' Hz'; 
+            if (oscBase) oscBase.frequency.setTargetAtTime(state.frequency, audioCtx.currentTime, 0.05);
+        });
+        
+        els.phSli.addEventListener('input', e => { state.phase = parseInt(e.target.value); els.phVal.innerText = state.phase + '°'; });
+        els.dcSli.addEventListener('input', e => { state.dcOffset = parseFloat(e.target.value); els.dcVal.innerText = state.dcOffset.toFixed(1); });
+        
+        els.gammaSli.addEventListener('input', e => { state.gamma = parseFloat(e.target.value); els.gammaVal.innerText = state.gamma.toFixed(2); });
+        
+        els.chkEst.addEventListener('change', e => { 
+            if(e.target.checked) { 
+                state.waveMode = 'estacionaria'; 
+                els.chkViaj.checked = false; 
+            } else { 
+                state.waveMode = 'normal'; 
+            } 
+        });
+        
+        els.chkViaj.addEventListener('change', e => { 
+            if(e.target.checked) { 
+                state.waveMode = 'viajera'; 
+                els.chkEst.checked = false; 
+            } else { 
+                state.waveMode = 'normal'; 
+            }
+        });
+
+        els.btnPlay.addEventListener('click', playSound);
+        els.btnStop.addEventListener('click', stopSound);
+        els.btnMic.addEventListener('click', toggleMic);
+        
+        els.btnSync.addEventListener('click', () => {
+            if (!state.isMicActive || !fftData) return alert('Por favor, activa el micrófono primero para sincronizar.');
+            micAnalyser.getByteFrequencyData(fftData);
+            let maxI = 0, maxV = 0;
+            for(let i=0; i<fftData.length; i++) {
+                if(fftData[i] > maxV) { maxV = fftData[i]; maxI = i; }
+            }
+            let f = Math.round(maxI * (micCtx.sampleRate/2) / micAnalyser.frequencyBinCount);
+            f = Math.max(20, Math.min(1000, f)); 
+            
+            state.frequency = f; 
+            els.fSli.value = f; els.fVal.innerText = f + ' Hz';
+            if (oscBase) oscBase.frequency.value = f;
+        });
+
+        els.btnFreeze.addEventListener('click', () => {
+            state.isFrozen = !state.isFrozen;
+            els.btnFreeze.innerText = state.isFrozen ? '▶ Descongelar' : '🛑 Medir';
+            els.btnFreeze.classList.toggle('bg-indigo-600', state.isFrozen);
+            els.btnFreeze.classList.toggle('text-white', state.isFrozen);
+            mouse.cursorA = null; mouse.cursorB = null; 
+        });
+
+        els.btnFilter.addEventListener('click', () => {
+            state.isFilterActive = !state.isFilterActive;
+            els.btnFilter.classList.toggle('bg-teal-600', state.isFilterActive);
+            els.btnFilter.classList.toggle('text-white', state.isFilterActive);
+            if (micFilter) micFilter.frequency.value = state.isFilterActive ? 150 : 0;
+        });
+
+        els.cMain.addEventListener('mousemove', e => {
+            const rect = els.cMain.getBoundingClientRect();
+            mouse.x = (e.clientX - rect.left) * (window.devicePixelRatio || 1);
+            mouse.y = (e.clientY - rect.top) * (window.devicePixelRatio || 1);
+        });
+        els.cMain.addEventListener('mouseenter', () => mouse.over = true);
+        els.cMain.addEventListener('mouseleave', () => mouse.over = false);
+        els.cMain.addEventListener('click', () => {
+            if (!state.isFrozen) {
+                alert("Activa el botón '🛑 Medir' primero para colocar los cursores.");
+                return;
+            }
+            if (!mouse.cursorA) mouse.cursorA = {x: mouse.x, y: mouse.y};
+            else if (!mouse.cursorB) mouse.cursorB = {x: mouse.x, y: mouse.y};
+            else { mouse.cursorA = {x: mouse.x, y: mouse.y}; mouse.cursorB = null; } 
+        });
+
+        els.btnCsv.addEventListener('click', () => {
+            const { real, imag } = getFourierCoefficients(state.waveType, state.N);
+            let csv = "Posicion_kx,Amplitud_V\n";
+            for (let i = 0; i <= 1000; i++) {
+                const kx = (i/1000) * (Math.PI * 2 * (state.frequency/100));
+                const wt = state.timeOffset;
+                csv += `${(kx/Math.PI).toFixed(4)},${calculateMathPoint(kx, wt, real, imag).toFixed(4)}\n`;
+            }
+            const a = document.createElement('a');
+            a.href = encodeURI("data:text/csv;charset=utf-8," + csv);
+            a.download = "Onda_Analisis.csv"; a.click();
+        });
+
+        // --- 7. GUÍA INTERACTIVA (Driver.js) ---
+        function initTour() {
+            const driver = window.driver.js.driver;
+            const tour = driver({
+                showProgress: true, 
+                nextBtnText: 'Siguiente', 
+                prevBtnText: 'Anterior', 
+                doneBtnText: 'Entendido', 
+                allowClose: false,
+                steps: [
+                    { popover: { title: '👋 ¡Bienvenido!', description: 'Este es tu Laboratorio Virtual de Análisis Espectral de Fourier. Te daré un recorrido rápido de las herramientas.' } },
+                    { element: '#tour-selector', popover: { title: '1. Selector de Onda', description: 'Elige la función base matemática que deseas analizar. La fórmula se actualizará dinámicamente arriba.' } },
+                    { element: '#tour-armonicos', popover: { title: '2. Número de Armónicos', description: 'Controla el límite de la sumatoria (N). Observa cómo al aumentarlo se presenta el fenómeno de Gibbs en los bordes.' } },
+                    { element: '#tour-parametros', popover: { title: '3. Parámetros de Señal', description: 'Ajusta la Frecuencia (comprime la onda), la Fase (desplazamiento horizontal) y el Offset DC (desplazamiento vertical).' } },
+                    { element: '#tour-lab-fisica', popover: { title: '4. Laboratorio de Física', description: 'Experimenta con la atenuación (Amortiguamiento γ) y visualiza el comportamiento matemático alternando entre ondas estacionarias y viajeras.' } },
+                    { element: '#tour-audio', popover: { title: '5. Síntesis de Audio', description: 'Escucha la onda generada matemáticamente usando los coeficientes exactos de Fourier mediante Web Audio API.' } },
+                    { element: '#tour-mic', popover: { title: '6. Entrada de Micrófono', description: 'Activa tu micrófono para visualizar el sonido de tu entorno en tiempo real sobrepuesto a la onda matemática (Onda Cyan).' } },
+                    { element: '#tour-sync', popover: { title: '7. Auto-Sincronización', description: 'Si estás captando un tono constante (ej. desde tu celular), este botón lee el micrófono e iguala la onda matemática a la misma frecuencia.' } },
+                    { element: '#tour-medir', popover: { title: '8. Herramienta de Medición', description: 'Congela la gráfica en el tiempo. Luego da 2 clics en la pantalla para colocar los Cursores A y B, y calcular la diferencia.' } },
+                    { element: '#tour-filtro', popover: { title: '9. Filtro Anti-Ruido', description: 'Aplica un filtro pasa-altas digital a la entrada del micrófono para eliminar zumbidos o ruidos de viento de baja frecuencia.' } },
+                    { element: '#tour-exportar', popover: { title: '10. Exportar Datos', description: 'Descarga un archivo CSV con 1000 muestras de la función actual para que puedas graficarla en Excel o MATLAB.' } },
+                    { element: '#tour-fft', popover: { title: '11. Analizador FFT', description: 'Visualiza la transformada rápida del micrófono. La línea amarilla muestra el espectro, y los puntos rojos identifican automáticamente las frecuencias pico.' } },
+                    { element: '#tour-espectrograma', popover: { title: '12. Espectrograma', description: 'Observa la evolución de las frecuencias a lo largo del tiempo. Los colores cálidos (rosa) indican mayor intensidad (amplitud) en esa banda.' } }
+                ]
+            });
+
+            els.btnTour.addEventListener('click', () => tour.drive());
+
+            if (!localStorage.getItem('fourier_tour_v4')) {
+                setTimeout(() => {
+                    tour.drive();
+                    localStorage.setItem('fourier_tour_v4', 'true');
+                }, 500); 
+            }
+        }
+
+        // --- INICIALIZACIÓN ---
+        window.onload = () => { 
+            resize(); 
+            updateUI(); 
+            loop(); 
+            initTour(); 
+        };
+
+    </script>
+</body>
+</html>
